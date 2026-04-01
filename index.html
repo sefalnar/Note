@@ -3,200 +3,239 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ملاحظاتي الاحترافية</title>
+    <title>ملاحظاتي الذكية</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
-            --primary: #4f46e5;
-            --primary-hover: #4338ca;
+            --primary: #6366f1;
             --bg: #f3f4f6;
             --card: #ffffff;
             --text: #1f2937;
         }
+        * { box-sizing: border-box; }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: system-ui, -apple-system, sans-serif;
             background-color: var(--bg);
-            color: var(--text);
             margin: 0;
-            min-height: 100dvh; /* توافق كامل مع متصفحات الجوال */
-            display: flex;
-            flex-direction: column;
+            height: 100dvh;
+            overflow: hidden; /* لمنع التمرير الخارجي الزائد */
         }
-        .container { 
-            padding: 20px; 
-            max-width: 500px; 
-            margin: 0 auto; 
-            width: 100%; 
-            box-sizing: border-box; 
+
+        /* شاشة التسجيل */
+        .auth-container {
+            padding: 20px; max-width: 400px; margin: 100px auto;
+            background: white; border-radius: 20px; box-shadow: 0 10px 15px rgba(0,0,0,0.1);
         }
+
+        /* الشاشة الرئيسية */
+        .app-header {
+            background: var(--primary); color: white; padding: 15px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .notes-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 15px; padding: 20px; height: calc(100dvh - 70px);
+            overflow-y: auto; align-content: start;
+        }
+
+        /* كارت الملاحظة */
+        .note-card {
+            background: var(--card); padding: 15px; border-radius: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); cursor: pointer;
+            height: 150px; display: flex; flex-direction: column;
+        }
+        .note-card h3 { margin: 0 0 10px 0; font-size: 1.1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .note-card p { font-size: 0.9rem; color: #6b7280; flex-grow: 1; overflow: hidden; }
+
+        /* الزر العائم + */
+        .fab {
+            position: fixed; bottom: 30px; left: 30px;
+            width: 60px; height: 60px; background: var(--primary);
+            color: white; border-radius: 50%; display: flex;
+            justify-content: center; align-items: center;
+            font-size: 30px; border: none; cursor: pointer;
+            box-shadow: 0 5px 15px rgba(99, 102, 241, 0.4);
+        }
+
+        /* النافذة المنبثقة (Modal) */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); display: none;
+            justify-content: center; align-items: center; z-index: 100;
+        }
+        .modal-content {
+            background: white; width: 90%; max-width: 500px;
+            padding: 25px; border-radius: 20px; position: relative;
+        }
+        .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
         .hidden { display: none !important; }
         
-        /* التنسيقات العامة */
-        h2 { text-align: center; color: var(--primary); }
         input, textarea {
-            width: 100%; padding: 14px; margin-bottom: 12px;
-            border: 1px solid #d1d5db; border-radius: 10px; 
-            box-sizing: border-box; font-size: 16px;
+            width: 100%; padding: 12px; margin-bottom: 10px;
+            border: 1px solid #ddd; border-radius: 10px; font-size: 16px;
         }
-        button {
-            width: 100%; padding: 14px; background: var(--primary);
-            color: white; border: none; border-radius: 10px; 
-            cursor: pointer; font-weight: bold; font-size: 16px;
-            transition: background 0.3s;
-        }
-        button:hover { background: var(--primary-hover); }
-
-        /* تنسيق الملاحظات */
-        .note-card {
-            background: var(--card); padding: 18px; border-radius: 15px;
-            margin-bottom: 15px; border-right: 6px solid var(--primary);
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-        }
-        .note-card h3 { margin-top: 0; color: var(--text); }
-        .note-card p { color: #4b5563; line-height: 1.5; }
-        .note-actions { display: flex; gap: 10px; margin-top: 15px; }
-        
-        .btn-delete { background: #ef4444; flex: 1; }
-        .btn-edit { background: #10b981; flex: 1; }
-        
-        .logout-btn { background: #6b7280; width: auto; padding: 8px 15px; margin-bottom: 20px; }
+        .btn { padding: 10px; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; }
+        .btn-save { background: var(--primary); color: white; width: 100%; }
+        .btn-edit { background: #10b981; color: white; flex: 1; }
+        .btn-delete { background: #ef4444; color: white; flex: 1; }
+        .close-modal { position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-<div id="auth-section" class="container">
-    <h2>مرحباً بك</h2>
-    <p style="text-align: center;">سجل دخولك لإدارة ملاحظاتك بأمان</p>
+<div id="auth-section" class="auth-container">
+    <h2 style="text-align:center">دخول</h2>
     <input type="email" id="email" placeholder="البريد الإلكتروني">
     <input type="password" id="password" placeholder="كلمة المرور">
-    <button onclick="handleSignUp()">إنشاء حساب جديد</button>
-    <button onclick="handleLogin()" style="background:none; color:var(--primary); border: 1px solid var(--primary); margin-top:10px;">تسجيل دخول</button>
+    <button class="btn btn-save" onclick="handleLogin()">دخول</button>
+    <button onclick="handleSignUp()" style="background:none; border:none; color:var(--primary); width:100%; margin-top:10px;">إنشاء حساب جديد</button>
 </div>
 
-<div id="app-section" class="container hidden">
-    <div style="display:flex; justify-content: space-between; align-items:center;">
-        <h2 style="margin:0;">ملاحظاتي</h2>
-        <button class="logout-btn" onclick="handleLogout()">خروج</button>
+<div id="app-section" class="hidden">
+    <div class="app-header">
+        <strong>ملاحظاتي</strong>
+        <span onclick="handleLogout()" style="cursor:pointer; font-size: 14px;">خروج</span>
     </div>
 
-    <div id="note-form" style="margin-top:20px; background:#fff; padding:15px; border-radius:15px;">
-        <input type="hidden" id="edit-id">
-        <input type="text" id="note-title" placeholder="عنوان الملاحظة">
-        <textarea id="note-content" placeholder="اكتب ملاحظتك هنا..." rows="3"></textarea>
-        <button id="save-btn" onclick="saveNote()">حفظ الآن</button>
-        <button id="cancel-btn" class="hidden" onclick="clearForm()" style="background:#9ca3af; margin-top:5px;">إلغاء التعديل</button>
-    </div>
-
-    <div id="notes-list" style="margin-top:25px;">
+    <div id="notes-list" class="notes-grid">
         </div>
+
+    <button class="fab" onclick="openModal()">+</button>
+</div>
+
+<div id="note-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal()">&times;</span>
+        <h3 id="modal-title-text">ملاحظة جديدة</h3>
+        <input type="hidden" id="edit-id">
+        <input type="text" id="note-title" placeholder="العنوان">
+        <textarea id="note-content" placeholder="التفاصيل..." rows="5"></textarea>
+        
+        <div id="new-note-btns">
+            <button class="btn btn-save" onclick="saveNote()">حفظ الملاحظة</button>
+        </div>
+        
+        <div id="view-note-btns" class="modal-actions hidden">
+            <button class="btn btn-edit" onclick="enableEditMode()">تعديل</button>
+            <button class="btn btn-delete" onclick="deleteNote()">حذف</button>
+        </div>
+    </div>
 </div>
 
 <script>
-    // بيانات الربط التي قدمتها
     const SUPABASE_URL = 'https://vlygthdszwyjrhrjnbfa.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_QVnl04i66J2Go943y2z-ZA_9tGINsLv';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    const authSection = document.getElementById('auth-section');
-    const appSection = document.getElementById('app-section');
-
-    // مراقبة حالة الجلسة
+    // التحقق من حالة المستخدم
     _supabase.auth.onAuthStateChange((event, session) => {
         if (session) {
-            authSection.classList.add('hidden');
-            appSection.classList.remove('hidden');
+            document.getElementById('auth-section').classList.add('hidden');
+            document.getElementById('app-section').classList.remove('hidden');
             loadNotes();
         } else {
-            authSection.classList.remove('hidden');
-            appSection.classList.add('hidden');
+            document.getElementById('auth-section').classList.remove('hidden');
+            document.getElementById('app-section').classList.add('hidden');
         }
     });
-
-    async function handleSignUp() {
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        if(!email || !password) return alert('يرجى ملء البيانات');
-        const { error } = await _supabase.auth.signUp({ email, password });
-        if (error) alert("خطأ: " + error.message); 
-        else alert('تم إرسال رسالة تفعيل لبريدك الإلكتروني!');
-    }
 
     async function handleLogin() {
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
         const { error } = await _supabase.auth.signInWithPassword({ email, password });
-        if (error) alert("خطأ في الدخول: " + error.message);
+        if (error) alert(error.message);
     }
 
-    async function handleLogout() {
-        await _supabase.auth.signOut();
+    async function handleSignUp() {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const { error } = await _supabase.auth.signUp({ email, password });
+        if (error) alert(error.message); else alert('تأكد من إيقاف خيار Confirm Email في لوحة تحكم Supabase لتسجيل الدخول فوراً!');
+    }
+
+    async function handleLogout() { await _supabase.auth.signOut(); }
+
+    // وظائف الملاحظات
+    async function loadNotes() {
+        const { data, error } = await _supabase.from('notes').select('*').order('created_at', { ascending: false });
+        const list = document.getElementById('notes-list');
+        list.innerHTML = '';
+        if (data) {
+            data.forEach(note => {
+                const div = document.createElement('div');
+                div.className = 'note-card';
+                div.innerHTML = `<h3>${note.title}</h3><p>${note.content || ''}</p>`;
+                div.onclick = () => openViewModal(note);
+                list.appendChild(div);
+            });
+        }
+    }
+
+    function openModal() {
+        clearForm();
+        document.getElementById('modal-title-text').innerText = "ملاحظة جديدة";
+        document.getElementById('new-note-btns').classList.remove('hidden');
+        document.getElementById('view-note-btns').classList.add('hidden');
+        document.getElementById('note-modal').style.display = 'flex';
+    }
+
+    function openViewModal(note) {
+        document.getElementById('edit-id').value = note.id;
+        document.getElementById('note-title').value = note.title;
+        document.getElementById('note-content').value = note.content;
+        document.getElementById('modal-title-text').innerText = "عرض الملاحظة";
+        
+        // إيقاف الكتابة في البداية (وضع العرض)
+        document.getElementById('note-title').readOnly = true;
+        document.getElementById('note-content').readOnly = true;
+        
+        document.getElementById('new-note-btns').classList.add('hidden');
+        document.getElementById('view-note-btns').classList.remove('hidden');
+        document.getElementById('note-modal').style.display = 'flex';
+    }
+
+    function enableEditMode() {
+        document.getElementById('note-title').readOnly = false;
+        document.getElementById('note-content').readOnly = false;
+        document.getElementById('new-note-btns').classList.remove('hidden');
+        document.getElementById('view-note-btns').classList.add('hidden');
+        document.getElementById('modal-title-text').innerText = "تعديل الملاحظة";
     }
 
     async function saveNote() {
+        const id = document.getElementById('edit-id').value;
         const title = document.getElementById('note-title').value;
         const content = document.getElementById('note-content').value;
-        const id = document.getElementById('edit-id').value;
-
-        if(!title) return alert('العنوان مطلوب');
-
         const { data: { user } } = await _supabase.auth.getUser();
 
         if (id) {
-            const { error } = await _supabase.from('notes').update({ title, content }).eq('id', id);
-            if(error) alert(error.message);
+            await _supabase.from('notes').update({ title, content }).eq('id', id);
         } else {
-            const { error } = await _supabase.from('notes').insert([{ title, content, user_id: user.id }]);
-            if(error) alert(error.message);
+            await _supabase.from('notes').insert([{ title, content, user_id: user.id }]);
         }
-
-        clearForm();
+        closeModal();
         loadNotes();
     }
 
-    async function loadNotes() {
-        const { data, error } = await _supabase.from('notes').select('*').order('created_at', { ascending: false });
-        if (error) return console.error(error);
-
-        const list = document.getElementById('notes-list');
-        if(data.length === 0) {
-            list.innerHTML = '<p style="text-align:center; color:#9ca3af;">لا توجد ملاحظات بعد..</p>';
-            return;
-        }
-
-        list.innerHTML = data.map(note => `
-            <div class="note-card">
-                <h3>${note.title}</h3>
-                <p>${note.content || ''}</p>
-                <div class="note-actions">
-                    <button class="btn-edit" onclick="editNote('${note.id}', '${note.title}', '${note.content}')">تعديل</button>
-                    <button class="btn-delete" onclick="deleteNote('${note.id}')">حذف</button>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    async function deleteNote(id) {
-        if (confirm('حذف هذه الملاحظة؟')) {
+    async function deleteNote() {
+        const id = document.getElementById('edit-id').value;
+        if (confirm('هل تريد حذف هذه الملاحظة؟')) {
             await _supabase.from('notes').delete().eq('id', id);
+            closeModal();
             loadNotes();
         }
     }
 
-    function editNote(id, title, content) {
-        document.getElementById('edit-id').value = id;
-        document.getElementById('note-title').value = title;
-        document.getElementById('note-content').value = (content === 'null' ? '' : content);
-        document.getElementById('save-btn').innerText = "تحديث الملاحظة";
-        document.getElementById('cancel-btn').classList.remove('hidden');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+    function closeModal() { 
+        document.getElementById('note-modal').style.display = 'none';
+        document.getElementById('note-title').readOnly = false;
+        document.getElementById('note-content').readOnly = false;
     }
 
     function clearForm() {
         document.getElementById('edit-id').value = '';
         document.getElementById('note-title').value = '';
         document.getElementById('note-content').value = '';
-        document.getElementById('save-btn').innerText = "حفظ الآن";
-        document.getElementById('cancel-btn').classList.add('hidden');
     }
 </script>
 </body>
