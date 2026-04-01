@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>Notes App</title>
+
+<style>
+body { font-family:sans-serif; max-width:600px; margin:auto; background:#f5f5f5; }
+input, textarea { width:100%; padding:10px; margin:5px 0; }
+button { padding:8px; margin:3px; cursor:pointer; }
+.note { background:white; padding:15px; border-radius:10px; margin:10px 0; cursor:pointer; }
+.hidden { display:none; }
+.modal {
+  position: fixed;
+  top:0; left:0; width:100%; height:100%;
+  background: rgba(0,0,0,0.5); display:none;
+  justify-content:center; align-items:center;
+}
+.modal-content {
+  background:white; padding:20px; width:90%; max-width:500px; border-radius:10px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>📒 ملاحظاتي</h2>
+
+<div id="auth">
+  <input id="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Password">
+  <button onclick="signUp()">🆕 تسجيل</button>
+  <button onclick="signIn()">🔑 دخول</button>
+</div>
+
+<div id="app" class="hidden">
+<button onclick="logout()">🚪 تسجيل خروج</button>
+
+<input id="title" placeholder="عنوان">
+<textarea id="content" placeholder="اكتب ملاحظتك..."></textarea>
+<button onclick="saveNote()">💾 حفظ</button>
+
+<h3>ملاحظاتك</h3>
+<div id="notes"></div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="modal-content">
+    <input id="editTitle">
+    <textarea id="editContent" style="height:150px;"></textarea>
+    <button onclick="updateNote()">💾 حفظ التعديل</button>
+    <button onclick="copyCurrent()">📋 نسخ</button>
+    <button onclick="deleteCurrent()">🗑️ حذف</button>
+    <button onclick="closeModal()">❌ إغلاق</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+<script>
+const supabase = window.supabase.createClient(
+  "https://euuutdmnpzoletqebdxl.supabase.co",
+  "sb_publishable_PhEfVFokU_Bl_VL7N1gacQ_J5Erifae"
+);
+
+let currentId = null;
+
+// تسجيل جديد
+async function signUp() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  const { error } = await supabase.auth.signUp({ email, password });
+  if (error) return alert(error.message);
+  alert("تم إنشاء الحساب!");
+}
+
+// تسجيل دخول
+async function signIn() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) return alert(error.message);
+  startApp();
+}
+
+// تسجيل خروج
+async function logout() {
+  await supabase.auth.signOut();
+  location.reload();
+}
+
+// تشغيل التطبيق
+async function startApp() {
+  document.getElementById("auth").classList.add("hidden");
+  document.getElementById("app").classList.remove("hidden");
+  loadNotes();
+}
+
+// حفظ ملاحظة جديدة
+async function saveNote() {
+  let title = document.getElementById("title").value.trim();
+  const content = document.getElementById("content").value.trim();
+  if (!content) return alert("اكتب شيئاً!");
+
+  if (!title) title = content.split("\n")[0].substring(0,30);
+
+  const { data: { user } } = await supabase.auth.getUser();
+  await supabase.from("notes").insert([{ user_id: user.id, title, content }]);
+
+  document.getElementById("title").value = "";
+  document.getElementById("content").value = "";
+  loadNotes();
+}
+
+// تحميل الملاحظات
+async function loadNotes() {
+  const { data } = await supabase.from("notes")
+    .select("*").order("created_at", { ascending:false });
+
+  const notesDiv = document.getElementById("notes");
+  notesDiv.innerHTML = "";
+
+  data.forEach(note => {
+    notesDiv.innerHTML += `
+      <div class="note" onclick="openNote(${note.id})">
+        <h3>${note.title}</h3>
+        <p>${note.content.substring(0,50)}...</p>
+      </div>
+    `;
+  });
+}
+
+// فتح ملاحظة
+async function openNote(id) {
+  currentId = id;
+  const { data } = await supabase.from("notes").select("*").eq("id", id).single();
+  document.getElementById("editTitle").value = data.title;
+  document.getElementById("editContent").value = data.content;
+  document.getElementById("modal").style.display = "flex";
+}
+
+// إغلاق النافذة
+function closeModal() { document.getElementById("modal").style.display = "none"; }
+
+// تحديث ملاحظة
+async function updateNote() {
+  const title = document.getElementById("editTitle").value;
+  const content = document.getElementById("editContent").value;
+  await supabase.from("notes").update({ title, content }).eq("id", currentId);
+  closeModal();
+  loadNotes();
+}
+
+// حذف ملاحظة
+async function deleteCurrent() {
+  if (!confirm("متأكد من الحذف؟")) return;
+  await supabase.from("notes").delete().eq("id", currentId);
+  closeModal();
+  loadNotes();
+}
+
+// نسخ نص الملاحظة
+function copyCurrent() {
+  const text = document.getElementById("editContent").value;
+  navigator.clipboard.writeText(text);
+  alert("تم النسخ!");
+}
+
+// تحقق إذا المستخدم مسجل مسبقاً
+async function checkUser() {
+  const { data } = await supabase.auth.getSession();
+  if (data.session) startApp();
+}
+
+checkUser();
+</script>
+
+</body>
+</html>
