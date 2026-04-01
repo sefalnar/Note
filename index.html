@@ -1,1 +1,203 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ملاحظاتي الاحترافية</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg: #f3f4f6;
+            --card: #ffffff;
+            --text: #1f2937;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            min-height: 100dvh; /* توافق كامل مع متصفحات الجوال */
+            display: flex;
+            flex-direction: column;
+        }
+        .container { 
+            padding: 20px; 
+            max-width: 500px; 
+            margin: 0 auto; 
+            width: 100%; 
+            box-sizing: border-box; 
+        }
+        .hidden { display: none !important; }
+        
+        /* التنسيقات العامة */
+        h2 { text-align: center; color: var(--primary); }
+        input, textarea {
+            width: 100%; padding: 14px; margin-bottom: 12px;
+            border: 1px solid #d1d5db; border-radius: 10px; 
+            box-sizing: border-box; font-size: 16px;
+        }
+        button {
+            width: 100%; padding: 14px; background: var(--primary);
+            color: white; border: none; border-radius: 10px; 
+            cursor: pointer; font-weight: bold; font-size: 16px;
+            transition: background 0.3s;
+        }
+        button:hover { background: var(--primary-hover); }
 
+        /* تنسيق الملاحظات */
+        .note-card {
+            background: var(--card); padding: 18px; border-radius: 15px;
+            margin-bottom: 15px; border-right: 6px solid var(--primary);
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        }
+        .note-card h3 { margin-top: 0; color: var(--text); }
+        .note-card p { color: #4b5563; line-height: 1.5; }
+        .note-actions { display: flex; gap: 10px; margin-top: 15px; }
+        
+        .btn-delete { background: #ef4444; flex: 1; }
+        .btn-edit { background: #10b981; flex: 1; }
+        
+        .logout-btn { background: #6b7280; width: auto; padding: 8px 15px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+<div id="auth-section" class="container">
+    <h2>مرحباً بك</h2>
+    <p style="text-align: center;">سجل دخولك لإدارة ملاحظاتك بأمان</p>
+    <input type="email" id="email" placeholder="البريد الإلكتروني">
+    <input type="password" id="password" placeholder="كلمة المرور">
+    <button onclick="handleSignUp()">إنشاء حساب جديد</button>
+    <button onclick="handleLogin()" style="background:none; color:var(--primary); border: 1px solid var(--primary); margin-top:10px;">تسجيل دخول</button>
+</div>
+
+<div id="app-section" class="container hidden">
+    <div style="display:flex; justify-content: space-between; align-items:center;">
+        <h2 style="margin:0;">ملاحظاتي</h2>
+        <button class="logout-btn" onclick="handleLogout()">خروج</button>
+    </div>
+
+    <div id="note-form" style="margin-top:20px; background:#fff; padding:15px; border-radius:15px;">
+        <input type="hidden" id="edit-id">
+        <input type="text" id="note-title" placeholder="عنوان الملاحظة">
+        <textarea id="note-content" placeholder="اكتب ملاحظتك هنا..." rows="3"></textarea>
+        <button id="save-btn" onclick="saveNote()">حفظ الآن</button>
+        <button id="cancel-btn" class="hidden" onclick="clearForm()" style="background:#9ca3af; margin-top:5px;">إلغاء التعديل</button>
+    </div>
+
+    <div id="notes-list" style="margin-top:25px;">
+        </div>
+</div>
+
+<script>
+    // بيانات الربط التي قدمتها
+    const SUPABASE_URL = 'https://vlygthdszwyjrhrjnbfa.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_QVnl04i66J2Go943y2z-ZA_9tGINsLv';
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const authSection = document.getElementById('auth-section');
+    const appSection = document.getElementById('app-section');
+
+    // مراقبة حالة الجلسة
+    _supabase.auth.onAuthStateChange((event, session) => {
+        if (session) {
+            authSection.classList.add('hidden');
+            appSection.classList.remove('hidden');
+            loadNotes();
+        } else {
+            authSection.classList.remove('hidden');
+            appSection.classList.add('hidden');
+        }
+    });
+
+    async function handleSignUp() {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        if(!email || !password) return alert('يرجى ملء البيانات');
+        const { error } = await _supabase.auth.signUp({ email, password });
+        if (error) alert("خطأ: " + error.message); 
+        else alert('تم إرسال رسالة تفعيل لبريدك الإلكتروني!');
+    }
+
+    async function handleLogin() {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const { error } = await _supabase.auth.signInWithPassword({ email, password });
+        if (error) alert("خطأ في الدخول: " + error.message);
+    }
+
+    async function handleLogout() {
+        await _supabase.auth.signOut();
+    }
+
+    async function saveNote() {
+        const title = document.getElementById('note-title').value;
+        const content = document.getElementById('note-content').value;
+        const id = document.getElementById('edit-id').value;
+
+        if(!title) return alert('العنوان مطلوب');
+
+        const { data: { user } } = await _supabase.auth.getUser();
+
+        if (id) {
+            const { error } = await _supabase.from('notes').update({ title, content }).eq('id', id);
+            if(error) alert(error.message);
+        } else {
+            const { error } = await _supabase.from('notes').insert([{ title, content, user_id: user.id }]);
+            if(error) alert(error.message);
+        }
+
+        clearForm();
+        loadNotes();
+    }
+
+    async function loadNotes() {
+        const { data, error } = await _supabase.from('notes').select('*').order('created_at', { ascending: false });
+        if (error) return console.error(error);
+
+        const list = document.getElementById('notes-list');
+        if(data.length === 0) {
+            list.innerHTML = '<p style="text-align:center; color:#9ca3af;">لا توجد ملاحظات بعد..</p>';
+            return;
+        }
+
+        list.innerHTML = data.map(note => `
+            <div class="note-card">
+                <h3>${note.title}</h3>
+                <p>${note.content || ''}</p>
+                <div class="note-actions">
+                    <button class="btn-edit" onclick="editNote('${note.id}', '${note.title}', '${note.content}')">تعديل</button>
+                    <button class="btn-delete" onclick="deleteNote('${note.id}')">حذف</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    async function deleteNote(id) {
+        if (confirm('حذف هذه الملاحظة؟')) {
+            await _supabase.from('notes').delete().eq('id', id);
+            loadNotes();
+        }
+    }
+
+    function editNote(id, title, content) {
+        document.getElementById('edit-id').value = id;
+        document.getElementById('note-title').value = title;
+        document.getElementById('note-content').value = (content === 'null' ? '' : content);
+        document.getElementById('save-btn').innerText = "تحديث الملاحظة";
+        document.getElementById('cancel-btn').classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function clearForm() {
+        document.getElementById('edit-id').value = '';
+        document.getElementById('note-title').value = '';
+        document.getElementById('note-content').value = '';
+        document.getElementById('save-btn').innerText = "حفظ الآن";
+        document.getElementById('cancel-btn').classList.add('hidden');
+    }
+</script>
+</body>
+</html>
