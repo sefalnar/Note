@@ -2,95 +2,220 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ملاحظاتي</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --p: #6366f1; --bg: #f3f4f6; }
-        body { font-family: sans-serif; background: var(--bg); margin: 0; padding: 20px; }
-        .container { background: white; padding: 20px; border-radius: 15px; max-width: 400px; margin: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; }
-        button { width: 100%; padding: 12px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; margin-top: 10px; }
-        .btn-p { background: var(--p); color: white; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: sans-serif; background: var(--bg); margin: 0; height: 100dvh; overflow: hidden; }
         .hidden { display: none !important; }
-        .header { background: var(--p); color: white; padding: 15px; position: fixed; top:0; left:0; width:100%; display: flex; justify-content: space-between; z-index: 10; }
-        .grid { margin-top: 60px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .card { background: white; padding: 10px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .card img { width: 100%; height: 100px; object-fit: cover; border-radius: 5px; }
-        .fab { position: fixed; bottom: 20px; left: 20px; width: 60px; height: 60px; background: var(--p); color: white; border-radius: 50%; font-size: 30px; border: none; }
+        
+        /* واجهة الدخول */
+        .auth-container { padding: 30px; max-width: 400px; margin: 80px auto; background: white; border-radius: 20px; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        input, textarea { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 10px; font-size: 16px; outline: none; }
+        
+        /* الواجهة الرئيسية */
+        .header { background: var(--p); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; position: fixed; top:0; width:100%; z-index: 5; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; padding: 15px; margin-top: 60px; height: calc(100dvh - 60px); overflow-y: auto; align-content: start; }
+        
+        /* كارت الملاحظة */
+        .card { background: white; padding: 10px; border-radius: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer; }
+        .card img { width: 100%; height: 100px; object-fit: cover; border-radius: 10px; margin-bottom: 5px; }
+        .card h4 { margin: 5px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* الزر العائم */
+        .fab { position: fixed; bottom: 25px; left: 25px; width: 65px; height: 65px; background: var(--p); color: white; border-radius: 50%; border: none; font-size: 35px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); z-index: 10; }
+
+        /* النافذة المنبثقة */
+        .modal { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.7); display:none; justify-content: center; align-items: center; z-index: 100; padding: 15px; }
+        .modal-content { background: white; width: 100%; max-width: 500px; padding: 25px; border-radius: 20px; position: relative; max-height: 90dvh; overflow-y: auto; }
+        .btn { padding: 12px; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; font-size: 16px; }
+        .btn-p { background: var(--p); color: white; }
+        .btn-red { background: #fee2e2; color: #ef4444; }
+        .close { position: absolute; top: 10px; right: 15px; font-size: 30px; color: #aaa; cursor: pointer; }
+        #prev { width:100%; height:180px; object-fit:cover; display:none; border-radius:15px; margin-bottom:15px; }
     </style>
 </head>
 <body>
 
-<div id="auth-section" class="container">
-    <h2 style="text-align: center;">تسجيل الدخول</h2>
+<div id="auth-section" class="auth-container">
+    <h2>مرحباً بك</h2>
     <input type="email" id="email" placeholder="البريد الإلكتروني">
     <input type="password" id="password" placeholder="كلمة المرور">
-    <button class="btn-p" onclick="handleLogin()">دخول</button>
-    <button onclick="handleSignUp()" style="background:none; color:var(--p)">إنشاء حساب جديد</button>
+    <button class="btn btn-p" onclick="login()">دخول</button>
+    <button onclick="signup()" style="background:none; border:none; color:var(--p); margin-top:15px; cursor:pointer;">إنشاء حساب جديد</button>
 </div>
 
 <div id="app-section" class="hidden">
     <div class="header">
         <b>ملاحظاتي</b>
-        <span onclick="handleLogout()">خروج</span>
+        <span onclick="logout()" style="cursor:pointer; font-size: 0.9rem;">خروج</span>
     </div>
     <div id="list" class="grid"></div>
-    <button class="fab" onclick="alert('اضغط على الملاحظات أو أضف واحدة جديدة')">+</button>
+    <button class="fab" onclick="showAddModal()">+</button>
+</div>
+
+<div id="modal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeM()">&times;</span>
+        <h3 id="m-title">ملاحظة جديدة</h3>
+        <input type="hidden" id="edit-id">
+        
+        <img id="prev" src="">
+        <button id="up-btn" class="btn" onclick="document.getElementById('file').click()" style="background:#f3f4f6; color:#4b5563;">📷 إضافة صورة</button>
+        <input type="file" id="file" hidden accept="image/*" onchange="upImg(this)">
+        
+        <input type="text" id="title" placeholder="عنوان الملاحظة">
+        <textarea id="content" placeholder="التفاصيل..." rows="5"></textarea>
+        
+        <button id="save-btn" class="btn btn-p" onclick="save()">حفظ الملاحظة</button>
+        
+        <div id="edit-btns" class="hidden" style="display:flex; gap:10px;">
+            <button class="btn" style="background:#dcfce7; color:#10b981; flex:1;" onclick="enableEdit()">تعديل</button>
+            <button class="btn btn-red" style="flex:1;" onclick="del()">حذف</button>
+        </div>
+    </div>
 </div>
 
 <script>
-    // التأكد من أن المكتبة تم تحميلها قبل البدء
-    window.onload = function() {
-        const SUPABASE_URL = 'https://vlygthdszwyjrhrjnbfa.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_QVnl04i66J2Go943y2z-ZA_9tGINsLv';
-        
-        // إنشاء العميل
-        const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const URL = 'https://vlygthdszwyjrhrjnbfa.supabase.co';
+    const KEY = 'sb_publishable_QVnl04i66J2Go943y2z-ZA_9tGINsLv';
+    const sb = supabase.createClient(URL, KEY);
 
-        // جعل الوظائف متاحة عالمياً للأزرار
-        window.handleLogin = async function() {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
-            if (error) alert("خطأ: " + error.message);
-        };
+    let imgUrl = "";
 
-        window.handleSignUp = async function() {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const { error } = await _supabase.auth.signUp({ email, password });
-            if (error) alert(error.message); else alert("افحص إيميلك أو تأكد من إيقاف تأكيد الإيميل في Supabase");
-        };
-
-        window.handleLogout = async function() {
-            await _supabase.auth.signOut();
-        };
-
-        // مراقبة حالة المستخدم
-        _supabase.auth.onAuthStateChange((event, session) => {
-            if (session) {
-                document.getElementById('auth-section').classList.add('hidden');
-                document.getElementById('app-section').classList.remove('hidden');
-                loadNotes();
-            } else {
-                document.getElementById('auth-section').classList.remove('hidden');
-                document.getElementById('app-section').classList.add('hidden');
-            }
-        });
-
-        async function loadNotes() {
-            const { data } = await _supabase.from('notes').select('*').order('created_at', { ascending: false });
-            const list = document.getElementById('list');
-            list.innerHTML = '';
-            data?.forEach(n => {
-                const d = document.createElement('div');
-                d.className = 'card';
-                d.innerHTML = `${n.image_url ? `<img src="${n.image_url}">` : ''} <h4>${n.title}</h4>`;
-                list.appendChild(d);
-            });
+    // إدارة الجلسة
+    sb.auth.onAuthStateChange((ev, res) => {
+        if (res?.session) {
+            document.getElementById('auth-section').classList.add('hidden');
+            document.getElementById('app-section').classList.remove('hidden');
+            load();
+        } else {
+            document.getElementById('auth-section').classList.remove('hidden');
+            document.getElementById('app-section').classList.add('hidden');
         }
-    };
+    });
+
+    async function login() {
+        const e = document.getElementById('email').value;
+        const p = document.getElementById('password').value;
+        const { error } = await sb.auth.signInWithPassword({ email: e, password: p });
+        if (error) alert(error.message);
+    }
+
+    async function signup() {
+        const e = document.getElementById('email').value;
+        const p = document.getElementById('password').value;
+        const { error } = await sb.auth.signUp({ email: e, password: p });
+        if (error) alert(error.message); else alert("تم! تأكد من إيقاف تأكيد الإيميل في Supabase");
+    }
+
+    async function logout() { await sb.auth.signOut(); }
+
+    // الملاحظات
+    async function load() {
+        const { data } = await sb.from('notes').select('*').order('created_at', { ascending: false });
+        const list = document.getElementById('list');
+        list.innerHTML = '';
+        data?.forEach(n => {
+            const d = document.createElement('div');
+            d.className = 'card';
+            d.innerHTML = `${n.image_url ? `<img src="${n.image_url}">` : ''} <h4>${n.title}</h4>`;
+            d.onclick = () => showView(n);
+            list.appendChild(d);
+        });
+    }
+
+    async function upImg(el) {
+        if (!el.files[0]) return;
+        const file = el.files[0];
+        const btn = document.getElementById('up-btn');
+        btn.innerText = "جاري الرفع...";
+        btn.disabled = true;
+
+        const name = Date.now() + "_" + file.name;
+        const { error } = await sb.storage.from('note-images').upload(name, file);
+        if (error) { btn.disabled=false; btn.innerText="خطأ في الرفع"; return; }
+
+        const { data } = sb.storage.from('note-images').getPublicUrl(name);
+        imgUrl = data.publicUrl;
+        const prev = document.getElementById('prev');
+        prev.src = imgUrl;
+        prev.style.display = 'block';
+        btn.innerText = "تم الرفع ✅";
+        btn.disabled = false;
+    }
+
+    function showAddModal() {
+        clearForm();
+        document.getElementById('m-title').innerText = "ملاحظة جديدة";
+        document.getElementById('modal').style.display = 'flex';
+        document.getElementById('edit-btns').classList.add('hidden');
+        document.getElementById('save-btn').classList.remove('hidden');
+        document.getElementById('up-btn').classList.remove('hidden');
+    }
+
+    function showView(n) {
+        document.getElementById('edit-id').value = n.id;
+        document.getElementById('title').value = n.title;
+        document.getElementById('content').value = n.content;
+        document.getElementById('title').readOnly = true;
+        document.getElementById('content').readOnly = true;
+        imgUrl = n.image_url || "";
+        const prev = document.getElementById('prev');
+        if(imgUrl) { prev.src = imgUrl; prev.style.display = 'block'; } else { prev.style.display = 'none'; }
+        
+        document.getElementById('m-title').innerText = "عرض الملاحظة";
+        document.getElementById('save-btn').classList.add('hidden');
+        document.getElementById('up-btn').classList.add('hidden');
+        document.getElementById('edit-btns').classList.remove('hidden');
+        document.getElementById('modal').style.display = 'flex';
+    }
+
+    function enableEdit() {
+        document.getElementById('title').readOnly = false;
+        document.getElementById('content').readOnly = false;
+        document.getElementById('save-btn').classList.remove('hidden');
+        document.getElementById('up-btn').classList.remove('hidden');
+        document.getElementById('edit-btns').classList.add('hidden');
+    }
+
+    async function save() {
+        const id = document.getElementById('edit-id').value;
+        const t = document.getElementById('title').value;
+        const c = document.getElementById('content').value;
+        if(!t) return alert("العنوان مطلوب");
+        
+        const { data: { user } } = await sb.auth.getUser();
+        const obj = { title: t, content: c, user_id: user.id, image_url: imgUrl };
+        
+        if (id) await sb.from('notes').update(obj).eq('id', id);
+        else await sb.from('notes').insert([obj]);
+        
+        closeM();
+        load();
+    }
+
+    async function del() {
+        if (confirm('حذف الملاحظة؟')) {
+            await sb.from('notes').delete().eq('id', document.getElementById('edit-id').value);
+            closeM(); load();
+        }
+    }
+
+    function closeM() { document.getElementById('modal').style.display = 'none'; }
+    
+    function clearForm() {
+        document.getElementById('edit-id').value = '';
+        document.getElementById('title').value = '';
+        document.getElementById('content').value = '';
+        document.getElementById('title').readOnly = false;
+        document.getElementById('content').readOnly = false;
+        document.getElementById('prev').style.display = 'none';
+        document.getElementById('up-btn').innerText = "📷 إضافة صورة";
+        imgUrl = "";
+    }
 </script>
 </body>
 </html>
