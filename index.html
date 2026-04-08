@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ملاحظاتي الذكية</title>
+    <title>ملاحظاتي المصورة</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
@@ -18,12 +18,12 @@
             background-color: var(--bg);
             margin: 0;
             height: 100dvh;
-            overflow: hidden; /* لمنع التمرير الخارجي الزائد */
+            overflow: hidden;
         }
 
         /* شاشة التسجيل */
         .auth-container {
-            padding: 20px; max-width: 400px; margin: 100px auto;
+            padding: 20px; max-width: 400px; margin: 80px auto;
             background: white; border-radius: 20px; box-shadow: 0 10px 15px rgba(0,0,0,0.1);
         }
 
@@ -31,23 +31,27 @@
         .app-header {
             background: var(--primary); color: white; padding: 15px 20px;
             display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
         .notes-grid {
             display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-            gap: 15px; padding: 20px; height: calc(100dvh - 70px);
+            gap: 15px; padding: 20px; height: calc(100dvh - 65px);
             overflow-y: auto; align-content: start;
         }
 
         /* كارت الملاحظة */
         .note-card {
-            background: var(--card); padding: 15px; border-radius: 15px;
+            background: var(--card); padding: 10px; border-radius: 15px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05); cursor: pointer;
-            height: 150px; display: flex; flex-direction: column;
+            display: flex; flex-direction: column; overflow: hidden;
+            transition: transform 0.2s;
         }
-        .note-card h3 { margin: 0 0 10px 0; font-size: 1.1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .note-card p { font-size: 0.9rem; color: #6b7280; flex-grow: 1; overflow: hidden; }
+        .note-card:active { transform: scale(0.95); }
+        .note-card img { width: 100%; height: 100px; object-fit: cover; border-radius: 10px; margin-bottom: 8px; }
+        .note-card h3 { margin: 5px 0; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .note-card p { font-size: 0.85rem; color: #6b7280; margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
-        /* الزر العائم + */
+        /* الزر العائم */
         .fab {
             position: fixed; bottom: 30px; left: 30px;
             width: 60px; height: 60px; background: var(--primary);
@@ -55,50 +59,53 @@
             justify-content: center; align-items: center;
             font-size: 30px; border: none; cursor: pointer;
             box-shadow: 0 5px 15px rgba(99, 102, 241, 0.4);
+            z-index: 10;
         }
 
-        /* النافذة المنبثقة (Modal) */
+        /* النافذة المنبثقة */
         .modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); display: none;
-            justify-content: center; align-items: center; z-index: 100;
+            background: rgba(0,0,0,0.6); display: none;
+            justify-content: center; align-items: center; z-index: 100; padding: 15px;
         }
         .modal-content {
-            background: white; width: 90%; max-width: 500px;
-            padding: 25px; border-radius: 20px; position: relative;
+            background: white; width: 100%; max-width: 500px;
+            padding: 20px; border-radius: 20px; position: relative;
+            max-height: 90dvh; overflow-y: auto;
         }
-        .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 15px; }
         .hidden { display: none !important; }
         
         input, textarea {
             width: 100%; padding: 12px; margin-bottom: 10px;
-            border: 1px solid #ddd; border-radius: 10px; font-size: 16px;
+            border: 1px solid #ddd; border-radius: 10px; font-size: 16px; outline: none;
         }
-        .btn { padding: 10px; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; }
+        .btn { padding: 12px; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; font-size: 14px; }
         .btn-save { background: var(--primary); color: white; width: 100%; }
         .btn-edit { background: #10b981; color: white; flex: 1; }
         .btn-delete { background: #ef4444; color: white; flex: 1; }
-        .close-modal { position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; }
+        .close-modal { position: absolute; top: 10px; right: 15px; font-size: 28px; cursor: pointer; color: #9ca3af; }
+
+        #image-preview { width: 100%; border-radius: 15px; margin-bottom: 10px; display: none; max-height: 200px; object-fit: cover; }
     </style>
 </head>
 <body>
 
 <div id="auth-section" class="auth-container">
-    <h2 style="text-align:center">دخول</h2>
+    <h2 style="text-align:center">ملاحظاتي</h2>
     <input type="email" id="email" placeholder="البريد الإلكتروني">
     <input type="password" id="password" placeholder="كلمة المرور">
     <button class="btn btn-save" onclick="handleLogin()">دخول</button>
-    <button onclick="handleSignUp()" style="background:none; border:none; color:var(--primary); width:100%; margin-top:10px;">إنشاء حساب جديد</button>
+    <button onclick="handleSignUp()" style="background:none; border:none; color:var(--primary); width:100%; margin-top:15px; cursor:pointer;">إنشاء حساب جديد</button>
 </div>
 
 <div id="app-section" class="hidden">
     <div class="app-header">
-        <strong>ملاحظاتي</strong>
-        <span onclick="handleLogout()" style="cursor:pointer; font-size: 14px;">خروج</span>
+        <strong style="font-size: 1.2rem;">ملاحظاتي</strong>
+        <span onclick="handleLogout()" style="cursor:pointer; opacity: 0.8;">تسجيل خروج</span>
     </div>
 
-    <div id="notes-list" class="notes-grid">
-        </div>
+    <div id="notes-list" class="notes-grid"></div>
 
     <button class="fab" onclick="openModal()">+</button>
 </div>
@@ -106,13 +113,19 @@
 <div id="note-modal" class="modal">
     <div class="modal-content">
         <span class="close-modal" onclick="closeModal()">&times;</span>
-        <h3 id="modal-title-text">ملاحظة جديدة</h3>
+        <h3 id="modal-title-text" style="margin-top:0">ملاحظة جديدة</h3>
+        
         <input type="hidden" id="edit-id">
+        
+        <img id="image-preview" src="">
+        <input type="file" id="image-input" accept="image/*" style="display:none" onchange="previewAndUpload(this)">
+        <button id="add-img-btn" class="btn" onclick="document.getElementById('image-input').click()" style="background:#f3f4f6; color:#4b5563; width:100%; margin-bottom:10px;">📷 إضافة صورة</button>
+
         <input type="text" id="note-title" placeholder="العنوان">
-        <textarea id="note-content" placeholder="التفاصيل..." rows="5"></textarea>
+        <textarea id="note-content" placeholder="اكتب ملاحظتك هنا..." rows="4"></textarea>
         
         <div id="new-note-btns">
-            <button class="btn btn-save" onclick="saveNote()">حفظ الملاحظة</button>
+            <button id="save-main-btn" class="btn btn-save" onclick="saveNote()">حفظ الملاحظة</button>
         </div>
         
         <div id="view-note-btns" class="modal-actions hidden">
@@ -127,7 +140,8 @@
     const SUPABASE_KEY = 'sb_publishable_QVnl04i66J2Go943y2z-ZA_9tGINsLv';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // التحقق من حالة المستخدم
+    let currentImageUrl = "";
+
     _supabase.auth.onAuthStateChange((event, session) => {
         if (session) {
             document.getElementById('auth-section').classList.add('hidden');
@@ -150,12 +164,11 @@
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
         const { error } = await _supabase.auth.signUp({ email, password });
-        if (error) alert(error.message); else alert('تأكد من إيقاف خيار Confirm Email في لوحة تحكم Supabase لتسجيل الدخول فوراً!');
+        if (error) alert(error.message); else alert('تأكد من إيقاف Confirm Email في Supabase');
     }
 
     async function handleLogout() { await _supabase.auth.signOut(); }
 
-    // وظائف الملاحظات
     async function loadNotes() {
         const { data, error } = await _supabase.from('notes').select('*').order('created_at', { ascending: false });
         const list = document.getElementById('notes-list');
@@ -164,10 +177,42 @@
             data.forEach(note => {
                 const div = document.createElement('div');
                 div.className = 'note-card';
-                div.innerHTML = `<h3>${note.title}</h3><p>${note.content || ''}</p>`;
+                div.innerHTML = `
+                    ${note.image_url ? `<img src="${note.image_url}">` : ''}
+                    <h3>${note.title}</h3>
+                    <p>${note.content || ''}</p>
+                `;
                 div.onclick = () => openViewModal(note);
                 list.appendChild(div);
             });
+        }
+    }
+
+    async function previewAndUpload(input) {
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            const btn = document.getElementById('add-img-btn');
+            btn.innerText = "جاري الرفع...";
+            btn.disabled = true;
+
+            const fileName = `${Date.now()}_${file.name}`;
+            const { data, error } = await _supabase.storage.from('note-images').upload(fileName, file);
+
+            if (error) {
+                alert("خطأ في الرفع");
+                btn.disabled = false;
+                btn.innerText = "📷 إضافة صورة";
+                return;
+            }
+
+            const { data: pData } = _supabase.storage.from('note-images').getPublicUrl(fileName);
+            currentImageUrl = pData.publicUrl;
+            
+            const imgPrev = document.getElementById('image-preview');
+            imgPrev.src = currentImageUrl;
+            imgPrev.style.display = "block";
+            btn.innerText = "تم رفع الصورة ✅";
+            btn.disabled = false;
         }
     }
 
@@ -176,6 +221,7 @@
         document.getElementById('modal-title-text').innerText = "ملاحظة جديدة";
         document.getElementById('new-note-btns').classList.remove('hidden');
         document.getElementById('view-note-btns').classList.add('hidden');
+        document.getElementById('add-img-btn').classList.remove('hidden');
         document.getElementById('note-modal').style.display = 'flex';
     }
 
@@ -183,12 +229,19 @@
         document.getElementById('edit-id').value = note.id;
         document.getElementById('note-title').value = note.title;
         document.getElementById('note-content').value = note.content;
-        document.getElementById('modal-title-text').innerText = "عرض الملاحظة";
+        currentImageUrl = note.image_url || "";
         
-        // إيقاف الكتابة في البداية (وضع العرض)
+        if(currentImageUrl) {
+            document.getElementById('image-preview').src = currentImageUrl;
+            document.getElementById('image-preview').style.display = "block";
+        } else {
+            document.getElementById('image-preview').style.display = "none";
+        }
+
+        document.getElementById('modal-title-text').innerText = "عرض الملاحظة";
         document.getElementById('note-title').readOnly = true;
         document.getElementById('note-content').readOnly = true;
-        
+        document.getElementById('add-img-btn').classList.add('hidden');
         document.getElementById('new-note-btns').classList.add('hidden');
         document.getElementById('view-note-btns').classList.remove('hidden');
         document.getElementById('note-modal').style.display = 'flex';
@@ -197,6 +250,7 @@
     function enableEditMode() {
         document.getElementById('note-title').readOnly = false;
         document.getElementById('note-content').readOnly = false;
+        document.getElementById('add-img-btn').classList.remove('hidden');
         document.getElementById('new-note-btns').classList.remove('hidden');
         document.getElementById('view-note-btns').classList.add('hidden');
         document.getElementById('modal-title-text').innerText = "تعديل الملاحظة";
@@ -206,12 +260,15 @@
         const id = document.getElementById('edit-id').value;
         const title = document.getElementById('note-title').value;
         const content = document.getElementById('note-content').value;
+        if(!title) return alert("ضع عنواناً للملاحظة");
+
         const { data: { user } } = await _supabase.auth.getUser();
+        const payload = { title, content, user_id: user.id, image_url: currentImageUrl };
 
         if (id) {
-            await _supabase.from('notes').update({ title, content }).eq('id', id);
+            await _supabase.from('notes').update(payload).eq('id', id);
         } else {
-            await _supabase.from('notes').insert([{ title, content, user_id: user.id }]);
+            await _supabase.from('notes').insert([payload]);
         }
         closeModal();
         loadNotes();
@@ -219,7 +276,7 @@
 
     async function deleteNote() {
         const id = document.getElementById('edit-id').value;
-        if (confirm('هل تريد حذف هذه الملاحظة؟')) {
+        if (confirm('حذف الملاحظة؟')) {
             await _supabase.from('notes').delete().eq('id', id);
             closeModal();
             loadNotes();
@@ -228,14 +285,17 @@
 
     function closeModal() { 
         document.getElementById('note-modal').style.display = 'none';
-        document.getElementById('note-title').readOnly = false;
-        document.getElementById('note-content').readOnly = false;
+        currentImageUrl = "";
     }
 
     function clearForm() {
         document.getElementById('edit-id').value = '';
         document.getElementById('note-title').value = '';
         document.getElementById('note-content').value = '';
+        document.getElementById('image-preview').style.display = 'none';
+        document.getElementById('add-img-btn').innerText = "📷 إضافة صورة";
+        document.getElementById('note-title').readOnly = false;
+        document.getElementById('note-content').readOnly = false;
     }
 </script>
 </body>
