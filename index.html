@@ -3,311 +3,207 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ملاحظاتي الاحترافية</title>
-    
-    <link rel="icon" type="image/png" href="icon.png">
-    <link rel="apple-touch-icon" href="icon.png">
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#6366f1">
-
+    <title>ملاحظاتي</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
     <style>
-        :root {
-            --primary: #6366f1;
-            --bg: #f3f4f6;
-            --card: #ffffff;
-            --text: #1f2937;
-        }
+        :root { --p: #6366f1; --bg: #f3f4f6; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: sans-serif; background: var(--bg); margin: 0; height: 100dvh; overflow: hidden; }
+        .hidden { display: none !important; }
         
-        body {
-            font-family: system-ui, -apple-system, sans-serif;
-            background-color: var(--bg);
-            margin: 0;
-            height: 100dvh;
-            overflow: hidden;
-        }
-
-        /* تنسيق واجهة الدخول */
-        .auth-container {
-            padding: 30px; max-width: 400px; margin: 80px auto;
-            background: white; border-radius: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-        }
-
-        /* الهيدر */
-        .app-header {
-            background: var(--primary); color: white; padding: 15px 20px;
-            display: flex; justify-content: space-between; align-items: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-
-        /* شبكة الملاحظات */
-        .notes-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-            gap: 15px; padding: 15px; height: calc(100dvh - 65px);
-            overflow-y: auto; align-content: start;
-        }
-
-        .note-card {
-            background: var(--card); padding: 10px; border-radius: 18px;
-            box-shadow: 0 3px 6px rgba(0,0,0,0.05); cursor: pointer;
-            display: flex; flex-direction: column; overflow: hidden;
-            border: 1px solid #eee;
-        }
-        .note-card img { width: 100%; height: 110px; object-fit: cover; border-radius: 12px; margin-bottom: 8px; }
-        .note-card h3 { margin: 5px 0; font-size: 1rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .note-card p { font-size: 0.85rem; color: #6b7280; margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-
+        /* واجهة الدخول */
+        .auth-container { padding: 30px; max-width: 400px; margin: 80px auto; background: white; border-radius: 20px; text-align: center; }
+        input, textarea { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 10px; font-size: 16px; }
+        
+        /* الواجهة الرئيسية */
+        .header { background: var(--p); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; padding: 15px; height: calc(100dvh - 60px); overflow-y: auto; }
+        
+        /* الملاحظة */
+        .card { background: white; padding: 10px; border-radius: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer; }
+        .card img { width: 100%; height: 100px; object-fit: cover; border-radius: 10px; }
+        
         /* الزر العائم */
-        .fab {
-            position: fixed; bottom: 30px; left: 30px;
-            width: 65px; height: 65px; background: var(--primary);
-            color: white; border-radius: 50%; display: flex;
-            justify-content: center; align-items: center;
-            font-size: 35px; border: none; cursor: pointer;
-            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
-            z-index: 10;
-        }
+        .fab { position: fixed; bottom: 20px; left: 20px; width: 60px; height: 60px; background: var(--p); color: white; border-radius: 50%; border: none; font-size: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
 
-        /* النافذة المنبثقة (Modal) */
-        .modal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.7); display: none;
-            justify-content: center; align-items: center; z-index: 100; padding: 10px;
-        }
-        .modal-content {
-            background: white; width: 100%; max-width: 500px;
-            padding: 25px; border-radius: 30px; position: relative;
-            max-height: 90dvh; overflow-y: auto;
-        }
-        
-        input, textarea {
-            width: 100%; padding: 14px; margin-bottom: 12px;
-            border: 1px solid #e5e7eb; border-radius: 12px; font-size: 16px; outline: none;
-            background: #f9fafb;
-        }
-        
-        .btn { padding: 14px; border-radius: 12px; border: none; cursor: pointer; font-weight: bold; font-size: 16px; transition: 0.2s; }
-        .btn-save { background: var(--primary); color: white; width: 100%; }
-        .btn-delete { background: #fee2e2; color: #ef4444; flex: 1; }
-        .btn-edit { background: #dcfce7; color: #10b981; flex: 1; }
-        
-        .close-modal { position: absolute; top: 15px; right: 20px; font-size: 30px; cursor: pointer; color: #9ca3af; }
-        #image-preview { width: 100%; border-radius: 15px; margin-bottom: 15px; display: none; max-height: 250px; object-fit: cover; }
+        /* النافذة المنبثقة */
+        .modal { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.7); display:none; justify-content: center; align-items: center; z-index: 100; padding: 15px; }
+        .modal-content { background: white; width: 100%; max-width: 500px; padding: 20px; border-radius: 20px; position: relative; }
+        .btn { padding: 12px; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; width: 100%; margin-top: 5px; }
+        .btn-p { background: var(--p); color: white; }
+        .btn-red { background: #fee2e2; color: #ef4444; }
+        .close { position: absolute; top: 10px; right: 15px; font-size: 25px; color: #aaa; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <div id="auth-section" class="auth-container">
-    <h2 style="text-align:center; margin-bottom: 25px;">دخول التطبيق</h2>
-    <input type="email" id="email" placeholder="البريد الإلكتروني">
+    <h2>تسجيل الدخول</h2>
+    <input type="email" id="email" placeholder="الإيميل">
     <input type="password" id="password" placeholder="كلمة المرور">
-    <button class="btn btn-save" onclick="handleLogin()">تسجيل الدخول</button>
-    <button onclick="handleSignUp()" style="background:none; border:none; color:var(--primary); width:100%; margin-top:20px; font-weight: bold;">إنشاء حساب جديد</button>
+    <button class="btn btn-p" onclick="login()">دخول</button>
+    <button class="btn" onclick="signup()" style="background:none; color:var(--p)">إنشاء حساب</button>
 </div>
 
 <div id="app-section" class="hidden">
-    <div class="app-header">
-        <strong style="font-size: 1.3rem;">ملاحظاتي</strong>
-        <span onclick="handleLogout()" style="cursor:pointer; font-size: 0.9rem; background: rgba(255,255,255,0.2); padding: 5px 12px; border-radius: 8px;">خروج</span>
+    <div class="header">
+        <b>ملاحظاتي</b>
+        <span onclick="logout()">خروج</span>
     </div>
-
-    <div id="notes-list" class="notes-grid"></div>
-
-    <button class="fab" onclick="openModal()">+</button>
+    <div id="list" class="grid"></div>
+    <button class="fab" onclick="showModal()">+</button>
 </div>
 
-<div id="note-modal" class="modal">
+<div id="modal" class="modal">
     <div class="modal-content">
-        <span class="close-modal" onclick="closeModal()">&times;</span>
-        <h3 id="modal-title-text" style="margin-top:0; margin-bottom: 20px;">ملاحظة جديدة</h3>
-        
+        <span class="close" onclick="closeM()">&times;</span>
+        <h3 id="m-title">ملاحظة جديدة</h3>
         <input type="hidden" id="edit-id">
-        
-        <img id="image-preview" src="">
-        <input type="file" id="image-input" accept="image/*" style="display:none" onchange="previewAndUpload(this)">
-        <button id="add-img-btn" class="btn" onclick="document.getElementById('image-input').click()" style="background:#f3f4f6; color:#4b5563; width:100%; margin-bottom:15px;">📷 إضافة صورة</button>
-
-        <input type="text" id="note-title" placeholder="العنوان">
-        <textarea id="note-content" placeholder="اكتب تفاصيل الملاحظة..." rows="5"></textarea>
-        
-        <div id="new-note-btns">
-            <button id="save-main-btn" class="btn btn-save" onclick="saveNote()">حفظ الملاحظة</button>
-        </div>
-        
-        <div id="view-note-btns" class="modal-actions hidden">
-            <button class="btn btn-edit" onclick="enableEditMode()">تعديل</button>
-            <button class="btn btn-delete" onclick="deleteNote()">حذف</button>
+        <img id="prev" src="" style="width:100%; height:150px; object-fit:cover; display:none; border-radius:10px; margin-bottom:10px;">
+        <button id="up-btn" class="btn" onclick="document.getElementById('file').click()" style="background:#eee">📷 إضافة صورة</button>
+        <input type="file" id="file" hidden onchange="upImg(this)">
+        <input type="text" id="title" placeholder="العنوان">
+        <textarea id="content" placeholder="التفاصيل..." rows="4"></textarea>
+        <button id="save-btn" class="btn btn-p" onclick="save()">حفظ</button>
+        <div id="edit-btns" class="hidden">
+            <button class="btn" style="background:#dcfce7; color:#10b981" onclick="enableEdit()">تعديل</button>
+            <button class="btn btn-red" onclick="del()">حذف</button>
         </div>
     </div>
 </div>
 
 <script>
-    const SUPABASE_URL = 'https://vlygthdszwyjrhrjnbfa.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_QVnl04i66J2Go943y2z-ZA_9tGINsLv';
-    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // بياناتك الخاصة
+    const URL = 'https://vlygthdszwyjrhrjnbfa.supabase.co';
+    const KEY = 'sb_publishable_QVnl04i66J2Go943y2z-ZA_9tGINsLv';
+    const sb = supabase.createClient(URL, KEY);
 
-    let currentImageUrl = "";
+    let imgUrl = "";
 
-    // إدارة الجلسة
-    _supabase.auth.onAuthStateChange((event, session) => {
-        if (session) {
+    // مراقبة الحساب
+    sb.auth.onAuthStateChange((ev, res) => {
+        if (res) {
             document.getElementById('auth-section').classList.add('hidden');
             document.getElementById('app-section').classList.remove('hidden');
-            loadNotes();
+            load();
         } else {
             document.getElementById('auth-section').classList.remove('hidden');
             document.getElementById('app-section').classList.add('hidden');
         }
     });
 
-    async function handleLogin() {
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        const { error } = await _supabase.auth.signInWithPassword({ email, password });
-        if (error) alert("خطأ: " + error.message);
+    async function login() {
+        const e = document.getElementById('email').value;
+        const p = document.getElementById('password').value;
+        const { error } = await sb.auth.signInWithPassword({ email: e, password: p });
+        if (error) alert(error.message);
     }
 
-    async function handleSignUp() {
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        const { error } = await _supabase.auth.signUp({ email, password });
-        if (error) alert(error.message); else alert('تم! تأكد من إيقاف تأكيد الإيميل في Supabase');
+    async function signup() {
+        const e = document.getElementById('email').value;
+        const p = document.getElementById('password').value;
+        const { error } = await sb.auth.signUp({ email: e, password: p });
+        if (error) alert(error.message); else alert("تأكد من إيقاف تأكيد الإيميل في Supabase");
     }
 
-    async function handleLogout() { await _supabase.auth.signOut(); }
+    async function logout() { await sb.auth.signOut(); }
 
-    // جلب الملاحظات
-    async function loadNotes() {
-        const { data, error } = await _supabase.from('notes').select('*').order('created_at', { ascending: false });
-        const list = document.getElementById('notes-list');
+    // الملاحظات
+    async function load() {
+        const { data } = await sb.from('notes').select('*').order('created_at', { ascending: false });
+        const list = document.getElementById('list');
         list.innerHTML = '';
-        if (data) {
-            data.forEach(note => {
-                const div = document.createElement('div');
-                div.className = 'note-card';
-                div.innerHTML = `
-                    ${note.image_url ? `<img src="${note.image_url}">` : ''}
-                    <h3>${note.title}</h3>
-                    <p>${note.content || ''}</p>
-                `;
-                div.onclick = () => openViewModal(note);
-                list.appendChild(div);
-            });
+        data?.forEach(n => {
+            const d = document.createElement('div');
+            d.className = 'card';
+            d.innerHTML = `${n.image_url ? `<img src="${n.image_url}">` : ''} <h4>${n.title}</h4>`;
+            d.onclick = () => showView(n);
+            list.appendChild(d);
+        });
+    }
+
+    async function upImg(el) {
+        if (!el.files[0]) return;
+        const file = el.files[0];
+        document.getElementById('up-btn').innerText = "جاري الرفع...";
+        const name = Date.now() + "_" + file.name;
+        const { error } = await sb.storage.from('note-images').upload(name, file);
+        if (error) return alert("خطأ في الرفع");
+        const { data } = sb.storage.from('note-images').getPublicUrl(name);
+        imgUrl = data.publicUrl;
+        document.getElementById('prev').src = imgUrl;
+        document.getElementById('prev').style.display = 'block';
+        document.getElementById('up-btn').innerText = "تم الرفع ✅";
+    }
+
+    function showModal() {
+        clear();
+        document.getElementById('modal').style.display = 'flex';
+        document.getElementById('edit-btns').classList.add('hidden');
+        document.getElementById('save-btn').classList.remove('hidden');
+    }
+
+    function showView(n) {
+        document.getElementById('edit-id').value = n.id;
+        document.getElementById('title').value = n.title;
+        document.getElementById('content').value = n.content;
+        document.getElementById('title').readOnly = true;
+        document.getElementById('content').readOnly = true;
+        imgUrl = n.image_url || "";
+        if(imgUrl) {
+            document.getElementById('prev').src = imgUrl;
+            document.getElementById('prev').style.display = 'block';
+        } else {
+            document.getElementById('prev').style.display = 'none';
         }
+        document.getElementById('save-btn').classList.add('hidden');
+        document.getElementById('up-btn').classList.add('hidden');
+        document.getElementById('edit-btns').classList.remove('hidden');
+        document.getElementById('modal').style.display = 'flex';
     }
 
-    // رفع الصور
-    async function previewAndUpload(input) {
-        if (input.files && input.files[0]) {
-            const file = input.files[0];
-            const btn = document.getElementById('add-img-btn');
-            btn.innerText = "جاري الرفع...";
-            btn.disabled = true;
-
-            const fileName = `${Date.now()}_${file.name}`;
-            const { error } = await _supabase.storage.from('note-images').upload(fileName, file);
-
-            if (error) {
-                alert("فشل الرفع! تأكد من إعدادات الـ Storage");
-                btn.disabled = false;
-                btn.innerText = "📷 إضافة صورة";
-                return;
-            }
-
-            const { data: pData } = _supabase.storage.from('note-images').getPublicUrl(fileName);
-            currentImageUrl = pData.publicUrl;
-            
-            const imgPrev = document.getElementById('image-preview');
-            imgPrev.src = currentImageUrl;
-            imgPrev.style.display = "block";
-            btn.innerText = "تم الرفع ✅";
-            btn.disabled = false;
-        }
+    function enableEdit() {
+        document.getElementById('title').readOnly = false;
+        document.getElementById('content').readOnly = false;
+        document.getElementById('save-btn').classList.remove('hidden');
+        document.getElementById('up-btn').classList.remove('hidden');
+        document.getElementById('edit-btns').classList.add('hidden');
     }
 
-    function openModal() {
-        clearForm();
-        document.getElementById('modal-title-text').innerText = "ملاحظة جديدة";
-        document.getElementById('new-note-btns').classList.remove('hidden');
-        document.getElementById('view-note-btns').classList.add('hidden');
-        document.getElementById('add-img-btn').classList.remove('hidden');
-        document.getElementById('note-modal').style.display = 'flex';
-    }
-
-    function openViewModal(note) {
-        document.getElementById('edit-id').value = note.id;
-        document.getElementById('note-title').value = note.title;
-        document.getElementById('note-content').value = note.content;
-        currentImageUrl = note.image_url || "";
+    async function save() {
+        const id = document.getElementById('edit-id').value;
+        const t = document.getElementById('title').value;
+        const c = document.getElementById('content').value;
+        const u = (await sb.auth.getUser()).data.user;
+        const obj = { title: t, content: c, user_id: u.id, image_url: imgUrl };
         
-        const imgPrev = document.getElementById('image-preview');
-        if(currentImageUrl) {
-            imgPrev.src = currentImageUrl;
-            imgPrev.style.display = "block";
-        } else {
-            imgPrev.style.display = "none";
-        }
-
-        document.getElementById('modal-title-text').innerText = "عرض الملاحظة";
-        document.getElementById('note-title').readOnly = true;
-        document.getElementById('note-content').readOnly = true;
-        document.getElementById('add-img-btn').classList.add('hidden');
-        document.getElementById('new-note-btns').classList.add('hidden');
-        document.getElementById('view-note-btns').classList.remove('hidden');
-        document.getElementById('note-modal').style.display = 'flex';
+        if (id) await sb.from('notes').update(obj).eq('id', id);
+        else await sb.from('notes').insert([obj]);
+        
+        closeM();
+        load();
     }
 
-    function enableEditMode() {
-        document.getElementById('note-title').readOnly = false;
-        document.getElementById('note-content').readOnly = false;
-        document.getElementById('add-img-btn').classList.remove('hidden');
-        document.getElementById('new-note-btns').classList.remove('hidden');
-        document.getElementById('view-note-btns').classList.add('hidden');
-        document.getElementById('modal-title-text').innerText = "تعديل الملاحظة";
-    }
-
-    async function saveNote() {
+    async function del() {
         const id = document.getElementById('edit-id').value;
-        const title = document.getElementById('note-title').value;
-        const content = document.getElementById('note-content').value;
-        if(!title) return alert("يرجى كتابة عنوان");
-
-        const { data: { user } } = await _supabase.auth.getUser();
-        const payload = { title, content, user_id: user.id, image_url: currentImageUrl };
-
-        if (id) {
-            await _supabase.from('notes').update(payload).eq('id', id);
-        } else {
-            await _supabase.from('notes').insert([payload]);
-        }
-        closeModal();
-        loadNotes();
-    }
-
-    async function deleteNote() {
-        const id = document.getElementById('edit-id').value;
-        if (confirm('حذف هذه الملاحظة نهائياً؟')) {
-            await _supabase.from('notes').delete().eq('id', id);
-            closeModal();
-            loadNotes();
+        if (confirm('حذف؟')) {
+            await sb.from('notes').delete().eq('id', id);
+            closeM();
+            load();
         }
     }
 
-    function closeModal() { 
-        document.getElementById('note-modal').style.display = 'none';
-    }
-
-    function clearForm() {
+    function closeM() { document.getElementById('modal').style.display = 'none'; }
+    function clear() {
         document.getElementById('edit-id').value = '';
-        document.getElementById('note-title').value = '';
-        document.getElementById('note-content').value = '';
-        document.getElementById('image-preview').style.display = 'none';
-        document.getElementById('add-img-btn').innerText = "📷 إضافة صورة";
-        document.getElementById('note-title').readOnly = false;
-        document.getElementById('note-content').readOnly = false;
-        currentImageUrl = "";
+        document.getElementById('title').value = '';
+        document.getElementById('content').value = '';
+        document.getElementById('title').readOnly = false;
+        document.getElementById('content').readOnly = false;
+        document.getElementById('prev').style.display = 'none';
+        document.getElementById('up-btn').classList.remove('hidden');
+        document.getElementById('up-btn').innerText = "📷 إضافة صورة";
+        imgUrl = "";
     }
 </script>
 </body>
