@@ -77,7 +77,7 @@
             return;
         }
 
-        try {
+                try {
             const method = id ? 'PUT' : 'POST';
             const res = await fetch('/api/notes', {
                 method: method,
@@ -85,29 +85,23 @@
                 body: JSON.stringify({ id, title, content })
             });
 
-            // قراءة الرد كنص عادي لنعرف السبب الحقيقي
+            // قراءة الرد كنص لنعرف الخطأ الحرفي
             const responseText = await res.text();
-            console.log("رد السيرفر:", responseText);
-
-            // محاولة تحويله إلى JSON بأمان
-            let result;
-            try {
-                result = JSON.parse(responseText);
-            } catch (err) {
-                alert("رد السيرفر ليس JSON صحيحاً: " + responseText.substring(0, 100));
-                return;
-            }
-
+            
+            // إظهار أول 150 حرف من رد السيرفر في التنبيه لنعرف المشكلة فوراً
+            alert("رد السيرفر الحرفي هو: " + responseText);
+            
+            let result = JSON.parse(responseText);
             if (result.success) { 
                 closeM(); 
                 loadNotes(); 
             } else { 
-                alert("خطأ من السيرفر: " + (result.error || "غير معروف")); 
+                alert("خطأ: " + (result.error || "غير معروف")); 
             }
         } catch (e) { 
-            alert("فشل الاتصال: " + e.message); 
+            alert("خطأ في الكود: " + e.message); 
         }
-    }
+
 
 
     async function deleteNote() {
