@@ -4,7 +4,7 @@ export default {
 
     const corsHeaders = {
       "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type",
     };
 
@@ -13,7 +13,7 @@ export default {
     }
 
     try {
-      // جلب جميع الملاحظات (GET)
+      // 1. جلب جميع الملاحظات (GET)
       if (request.method === "GET" && url.pathname === "/api/notes") {
         const { results } = await env.DB.prepare("SELECT * FROM notes ORDER BY created_at DESC").all();
         return new Response(JSON.stringify(results), {
@@ -21,7 +21,7 @@ export default {
         });
       }
 
-      // إضافة ملاحظة جديدة (POST)
+      // 2. إضافة ملاحظة جديدة (POST)
       if (request.method === "POST" && url.pathname === "/api/notes") {
         const body = await request.json();
         const id = Date.now().toString();
@@ -33,6 +33,28 @@ export default {
         ).bind(id, title, content).run();
 
         return new Response(JSON.stringify({ success: true, id }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // 3. تعديل ملاحظة (PUT)
+      if (request.method === "PUT" && url.pathname === "/api/notes") {
+        const body = await request.json();
+        await env.DB.prepare(
+          "UPDATE notes SET title = ?, content = ? WHERE id = ?"
+        ).bind(body.title || "", body.content || "", body.id).run();
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // 4. حذف ملاحظة (DELETE)
+      if (request.method === "DELETE" && url.pathname === "/api/notes") {
+        const id = url.searchParams.get("id");
+        await env.DB.prepare("DELETE FROM notes WHERE id = ?").bind(id).run();
+
+        return new Response(JSON.stringify({ success: true }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
