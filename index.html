@@ -67,7 +67,7 @@
         } catch (e) { console.error(e); }
     }
 
-    async function saveNote() {
+      async function saveNote() {
         const id = document.getElementById('edit-id').value;
         const title = document.getElementById('title').value;
         const content = document.getElementById('content').value;
@@ -84,17 +84,31 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id, title, content })
             });
-            const result = await res.json();
+
+            // قراءة الرد كنص عادي لنعرف السبب الحقيقي
+            const responseText = await res.text();
+            console.log("رد السيرفر:", responseText);
+
+            // محاولة تحويله إلى JSON بأمان
+            let result;
+            try {
+                result = JSON.parse(responseText);
+            } catch (err) {
+                alert("رد السيرفر ليس JSON صحيحاً: " + responseText.substring(0, 100));
+                return;
+            }
+
             if (result.success) { 
                 closeM(); 
                 loadNotes(); 
             } else { 
-                alert("حدث خطأ أثناء الحفظ"); 
+                alert("خطأ من السيرفر: " + (result.error || "غير معروف")); 
             }
         } catch (e) { 
             alert("فشل الاتصال: " + e.message); 
         }
     }
+
 
     async function deleteNote() {
         const id = document.getElementById('edit-id').value;
