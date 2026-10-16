@@ -4,31 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
-
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
-<meta name="apple-mobile-web-app-title" content="ملاحظاتي">
-
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ملاحظاتي">
     <title>ملاحظاتي</title>
     <link rel="icon" type="image/png" href="icon.PNG">
-
-<link rel="apple-touch-icon" href="icon.PNG">
-
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="apple-touch-icon" href="icon.PNG">
     <style>
         :root { --p: #6366f1; --bg: #f3f4f6; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: sans-serif; background: var(--bg); margin: 0; height: 100dvh; overflow: hidden; }
         .hidden { display: none !important; }
-        .auth-container { padding: 30px; max-width: 400px; margin: 80px auto; background: white; border-radius: 20px; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
-        input, textarea { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 10px; font-size: 16px; outline: none; }
         .header { background: var(--p); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; position: fixed; top:0; width:100%; z-index: 5; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; padding: 15px; margin-top: 60px; height: calc(100dvh - 60px); overflow-y: auto; align-content: start; }
-        .card { background: white; padding: 10px; border-radius: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .card img { width: 100%; height: 100px; object-fit: cover; border-radius: 10px; }
-        .fab { position: fixed; bottom: 25px; left: 25px; width: 65px; height: 65px; background: var(--p); color: white; border-radius: 50%; border: none; font-size: 35px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); z-index: 10; }
+        .card { background: white; padding: 10px; border-radius: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer; }
+        .card h4 { margin: 5px 0 0 0; font-size: 16px; color: #333; }
+        .fab { position: fixed; bottom: 25px; left: 25px; width: 65px; height: 65px; background: var(--p); color: white; border-radius: 50%; border: none; font-size: 35px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); z-index: 10; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .modal { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.7); display:none; justify-content: center; align-items: center; z-index: 100; padding: 15px; }
         .modal-content { background: white; width: 100%; max-width: 500px; padding: 25px; border-radius: 20px; position: relative; max-height: 90dvh; overflow-y: auto; }
+        input, textarea { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 10px; font-size: 16px; outline: none; }
         .btn { padding: 12px; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; font-size: 16px; }
         .btn-p { background: var(--p); color: white; }
         .close { position: absolute; top: 10px; right: 15px; font-size: 30px; color: #aaa; cursor: pointer; }
@@ -36,16 +29,8 @@
 </head>
 <body>
 
-<div id="auth-section" class="auth-container">
-    <h2>تسجيل الدخول</h2>
-    <input type="email" id="userEmail" placeholder="البريد الإلكتروني">
-    <input type="password" id="userPassword" placeholder="كلمة المرور">
-    <button class="btn btn-p" onclick="login()">دخول</button>
-    <button onclick="signup()" style="background:none; border:none; color:var(--p); margin-top:15px;">إنشاء حساب</button>
-</div>
-
-<div id="app-section" class="hidden">
-    <div class="header"><b>ملاحظاتي</b><span onclick="logout()">خروج</span></div>
+<div id="app-section">
+    <div class="header"><b>ملاحظاتي</b></div>
     <div id="list" class="grid"></div>
     <button class="fab" onclick="showAdd()">+</button>
 </div>
@@ -55,144 +40,144 @@
         <span class="close" onclick="closeM()">&times;</span>
         <h3 id="m-title">ملاحظة جديدة</h3>
         <input type="hidden" id="edit-id">
-        <img id="prev" style="width:100%; height:150px; object-fit:cover; display:none; border-radius:15px; margin-bottom:10px;">
-        <button id="up-btn" class="btn" onclick="document.getElementById('file').click()" style="background:#eee">📷 صورة</button>
-        <input type="file" id="file" hidden accept="image/*" onchange="upload(this)">
         <input type="text" id="title" placeholder="العنوان">
         <textarea id="content" placeholder="التفاصيل..." rows="5"></textarea>
-        <button id="save-btn" class="btn btn-p" onclick="save()">حفظ</button>
+        <button id="save-btn" class="btn btn-p" onclick="saveNote()">حفظ</button>
         <div id="edit-btns" class="hidden">
             <button class="btn" style="background:#dcfce7; color:#10b981" onclick="enableEdit()">تعديل</button>
-            <button class="btn" style="background:#fee2e2; color:#ef4444" onclick="del()">حذف</button>
+            <button class="btn" style="background:#fee2e2; color:#ef4444" onclick="deleteNote()">حذف</button>
         </div>
     </div>
 </div>
 
 <script>
-    // الإعدادات
-    const SUPABASE_URL = 'https://vlygthdszwyjrhrjnbfa.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_QVnl04i66J2Go943y2z-ZA_9tGINsLv';
-    const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-    let currentImg = "";
-
-    // التأكد من حالة الدخول
-    client.auth.onAuthStateChange((event, session) => {
-        if (session) {
-            document.getElementById('auth-section').classList.add('hidden');
-            document.getElementById('app-section').classList.remove('hidden');
-            loadNotes();
-        } else {
-            document.getElementById('auth-section').classList.remove('hidden');
-            document.getElementById('app-section').classList.add('hidden');
-        }
-    });
-
-    async function login() {
-        const email = document.getElementById('userEmail').value;
-        const password = document.getElementById('userPassword').value;
-        const { error } = await client.auth.signInWithPassword({ email, password });
-        if (error) alert("خطأ: " + error.message);
-    }
-
-    async function signup() {
-        const email = document.getElementById('userEmail').value;
-        const password = document.getElementById('userPassword').value;
-        const { error } = await client.auth.signUp({ email, password });
-        if (error) alert(error.message); else alert("تأكد من إيقاف تأكيد الإيميل في Supabase");
-    }
-
-    async function logout() { await client.auth.signOut(); }
+    // تحميل الملاحظات عند فتح الصفحة مباشرة
+    window.onload = () => {
+        loadNotes();
+    };
 
     async function loadNotes() {
-        const { data } = await client.from('notes').select('*').order('created_at', { ascending: false });
-        const list = document.getElementById('list');
-        list.innerHTML = '';
-        data?.forEach(n => {
-            const d = document.createElement('div');
-            d.className = 'card';
-            d.innerHTML = `${n.image_url ? `<img src="${n.image_url}">` : ''} <h4>${n.title}</h4>`;
-            d.onclick = () => showView(n);
-            list.appendChild(d);
-        });
+        try {
+            const res = await fetch('/api/notes');
+            const notes = await res.json();
+            const list = document.getElementById('list');
+            list.innerHTML = '';
+            
+            if (Array.isArray(notes)) {
+                notes.forEach(n => {
+                    const d = document.createElement('div');
+                    d.className = 'card';
+                    d.innerHTML = `<h4>${escapeHtml(n.title)}</h4><p style="color:#666; font-size:14px; margin:5px 0 0 0;">${escapeHtml(n.content).substring(0, 50)}...</p>`;
+                    d.onclick = () => showView(n);
+                    list.appendChild(d);
+                });
+            }
+        } catch (e) {
+            console.error("خطأ في جلب الملاحظات:", e);
+        }
     }
 
-    async function upload(el) {
-        if (!el.files[0]) return;
-        const file = el.files[0];
-        document.getElementById('up-btn').innerText = "جاري الرفع...";
-        const name = Date.now() + "_" + file.name;
-        const { error } = await client.storage.from('note-images').upload(name, file);
-        if (error) { alert("خطأ رفع"); document.getElementById('up-btn').innerText="📷 صورة"; return; }
-        const { data } = client.storage.from('note-images').getPublicUrl(name);
-        currentImg = data.publicUrl;
-        document.getElementById('prev').src = currentImg;
-        document.getElementById('prev').style.display = 'block';
-        document.getElementById('up-btn').innerText = "تم ✅";
+    async function saveNote() {
+        const id = document.getElementById('edit-id').value;
+        const title = document.getElementById('title').value;
+        const content = document.getElementById('content').value;
+
+        if (!title && !content) {
+            alert("الرجاء كتابة العنوان أو المحتوى");
+            return;
+        }
+
+        try {
+            let res;
+            if (id) {
+                // تعديل ملاحظة موجودة (PUT)
+                res = await fetch('/api/notes', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, title, content })
+                });
+            } else {
+                // إضافة ملاحظة جديدة (POST)
+                res = await fetch('/api/notes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, content })
+                });
+            }
+
+            const result = await res.json();
+            if (result.success) {
+                closeM();
+                loadNotes();
+            } else {
+                alert("حدث خطأ أثناء الحفظ");
+            }
+        } catch (e) {
+            console.error("خطأ:", e);
+        }
+    }
+
+    async function deleteNote() {
+        const id = document.getElementById('edit-id').value;
+        if (confirm('هل أنت متأكد من الحذف؟')) {
+            try {
+                const res = await fetch(`/api/notes?id=${id}`, {
+                    method: 'DELETE'
+                });
+                const result = await res.json();
+                if (result.success) {
+                    closeM();
+                    loadNotes();
+                }
+            } catch (e) {
+                console.error("خطأ في الحذف:", e);
+            }
+        }
     }
 
     function showAdd() {
-        reset();
+        resetForm();
+        document.getElementById('m-title').innerText = "ملاحظة جديدة";
         document.getElementById('modal').style.display = 'flex';
         document.getElementById('edit-btns').classList.add('hidden');
         document.getElementById('save-btn').classList.remove('hidden');
     }
 
     function showView(n) {
+        document.getElementById('m-title').innerText = "عرض الملاحظة";
         document.getElementById('edit-id').value = n.id;
         document.getElementById('title').value = n.title;
         document.getElementById('content').value = n.content;
         document.getElementById('title').readOnly = true;
         document.getElementById('content').readOnly = true;
-        currentImg = n.image_url || "";
-        if(currentImg) { 
-            document.getElementById('prev').src = currentImg; 
-            document.getElementById('prev').style.display = 'block'; 
-        } else {
-            document.getElementById('prev').style.display = 'none';
-        }
         document.getElementById('save-btn').classList.add('hidden');
-        document.getElementById('up-btn').classList.add('hidden');
         document.getElementById('edit-btns').classList.remove('hidden');
         document.getElementById('modal').style.display = 'flex';
     }
 
     function enableEdit() {
+        document.getElementById('m-title').innerText = "تعديل الملاحظة";
         document.getElementById('title').readOnly = false;
         document.getElementById('content').readOnly = false;
         document.getElementById('save-btn').classList.remove('hidden');
-        document.getElementById('up-btn').classList.remove('hidden');
         document.getElementById('edit-btns').classList.add('hidden');
     }
 
-    async function save() {
-        const id = document.getElementById('edit-id').value;
-        const t = document.getElementById('title').value;
-        const c = document.getElementById('content').value;
-        const u = (await client.auth.getUser()).data.user;
-        const obj = { title: t, content: c, user_id: u.id, image_url: currentImg };
-        if (id) await client.from('notes').update(obj).eq('id', id);
-        else await client.from('notes').insert([obj]);
-        closeM(); loadNotes();
+    function closeM() { 
+        document.getElementById('modal').style.display = 'none'; 
     }
 
-    async function del() {
-        if (confirm('حذف؟')) {
-            await client.from('notes').delete().eq('id', document.getElementById('edit-id').value);
-            closeM(); loadNotes();
-        }
-    }
-
-    function closeM() { document.getElementById('modal').style.display = 'none'; }
-    function reset() {
+    function resetForm() {
         document.getElementById('edit-id').value = '';
         document.getElementById('title').value = '';
         document.getElementById('content').value = '';
         document.getElementById('title').readOnly = false;
         document.getElementById('content').readOnly = false;
-        document.getElementById('prev').style.display = 'none';
-        document.getElementById('up-btn').innerText = "📷 صورة";
-        currentImg = "";
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     }
 </script>
 </body>
