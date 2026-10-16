@@ -14,10 +14,8 @@ export default {
     }
 
     try {
-      // التأكد من أن المسار يتعامل مع api/notes بأي شكل (سواء بـ /api/notes أو بدون)
       if (path.includes("/api/notes")) {
         
-        // 1. جلب الملاحظات (GET)
         if (request.method === "GET") {
           const { results } = await env.DB.prepare("SELECT * FROM notes ORDER BY created_at DESC").all();
           return new Response(JSON.stringify(results || []), {
@@ -25,7 +23,6 @@ export default {
           });
         }
 
-        // 2. إضافة ملاحظة جديدة (POST)
         if (request.method === "POST") {
           const body = await request.json();
           const id = Date.now().toString();
@@ -36,12 +33,12 @@ export default {
             "INSERT INTO notes (id, title, content) VALUES (?, ?, ?)"
           ).bind(id, title, content).run();
 
-          return new Response(JSON.stringify({ success: true, id }), {
+          // إرسال رد واضح وصريح يؤكد النجاح
+          return new Response(JSON.stringify({ success: true, id: id }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
 
-        // 3. تعديل ملاحظة (PUT)
         if (request.method === "PUT") {
           const body = await request.json();
           await env.DB.prepare(
@@ -53,7 +50,6 @@ export default {
           });
         }
 
-        // 4. حذف ملاحظة (DELETE)
         if (request.method === "DELETE") {
           const id = url.searchParams.get("id");
           await env.DB.prepare("DELETE FROM notes WHERE id = ?").bind(id).run();
